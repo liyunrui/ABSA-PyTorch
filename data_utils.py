@@ -174,6 +174,31 @@ class ABSADataset(Dataset):
             all_data.append(data)
         self.data = all_data
 
+    def get_dataframe(self, tokenizer):
+        """
+        Conver dataset into DataFrame(Pandas)
+        It's only support for bert-based model.
+        """
+        df = []
+        columns_name = []
+        for i in range(len(self.data)):
+            tmp = []
+            for k, v in self.data[i].items():
+                try:
+                    to_str = " ".join(tokenizer.tokenizer.convert_ids_to_tokens(v))
+                    tmp.append(to_str)
+                except:
+                    if k == 'aspect_in_text':
+                        # it's a 1-D tensor wtih shape of (2,), representing the start and end index of the aspect
+                        v = v.numpy()  # 1-D tensor
+                        #print (v.shape)
+                    tmp.append(v)
+                if i <= 0:
+                    columns_name.append(k)
+            df.append(tmp)
+        df = pd.DataFrame(df,columns=columns_name)   
+        return df
+
     def __getitem__(self, index):
         return self.data[index]
 
