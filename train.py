@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader, random_split
 from data_utils import build_tokenizer, build_embedding_matrix, Tokenizer4Bert, ABSADataset
 
 from models import LSTM, IAN, MemNet, RAM, TD_LSTM, Cabasc, ATAE_LSTM, TNet_LF, AOA, MGAN
-from models.aen import CrossEntropyLoss_LSR, AEN_BERT
+from models.aen import CrossEntropyLoss_LSR, AEN_BERT, AEN_GloVe
 from models.bert_spc import BERT_SPC
 
 logger = logging.getLogger()
@@ -40,10 +40,12 @@ class Instructor:
             tokenizer = build_tokenizer(
                 fnames=[opt.dataset_file['train'], opt.dataset_file['test']],
                 max_seq_len=opt.max_seq_len,
+                data_path=opt.data_path,
                 dat_fname='{0}_tokenizer.dat'.format(opt.dataset))
             embedding_matrix = build_embedding_matrix(
                 word2idx=tokenizer.word2idx,
                 embed_dim=opt.embed_dim,
+                data_path=opt.data_path,
                 dat_fname='{0}_{1}_embedding_matrix.dat'.format(str(opt.embed_dim), opt.dataset))
             self.model = opt.model_class(embedding_matrix, opt).to(opt.device)
 
@@ -176,8 +178,8 @@ class Instructor:
 def main():
     # Hyper Parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_name', default='bert_spc', type=str)
-    parser.add_argument('--dataset', default='twitter', type=str, help='twitter, restaurant, laptop')
+    parser.add_argument('--model_name', default='bert_spc', type=str, required = True)
+    parser.add_argument('--dataset', default='twitter', type=str, help='twitter, restaurant, laptop, headphone', required = True)
     parser.add_argument('--optimizer', default='adam', type=str)
     parser.add_argument('--initializer', default='xavier_uniform_', type=str)
     parser.add_argument('--learning_rate', default=2e-5, type=float, help='try 5e-5, 2e-5 for BERT, 1e-3 for others')
@@ -196,6 +198,7 @@ def main():
     parser.add_argument('--device', default=None, type=str, help='e.g. cuda:0')
     parser.add_argument('--seed', default=None, type=int, help='set seed for reproducibility')
     parser.add_argument('--valset_ratio', default=0, type=float, help='set ratio between 0 and 1 for validation support')
+    parser.add_argument('--data_path', default="/dev/data", type=str, help='it is only used building own tokenizer and embedding matrix')
     opt = parser.parse_args()
 
     if opt.seed is not None:
@@ -219,6 +222,7 @@ def main():
         'mgan': MGAN,
         'bert_spc': BERT_SPC,
         'aen_bert': AEN_BERT,
+        'aen':AEN_GloVe,
     }
     dataset_files = {
         'twitter': {
@@ -232,7 +236,12 @@ def main():
         'laptop': {
             'train': './datasets/semeval14/Laptops_Train.xml.seg',
             'test': './datasets/semeval14/Laptops_Test_Gold.xml.seg'
-        }
+        },
+        'headphone':{
+            "train":"./datasets/headphone/headphone_train.txt",
+            "test":"./datasets/headphone/headphone_test.txt"
+            
+        },
     }
     input_colses = {
         'lstm': ['text_raw_indices'],
@@ -247,6 +256,7 @@ def main():
         'mgan': ['text_raw_indices', 'aspect_indices', 'text_left_indices'],
         'bert_spc': ['text_bert_indices', 'bert_segments_ids'],
         'aen_bert': ['text_raw_bert_indices', 'aspect_bert_indices'],
+        'aen': ['text_raw_indices', 'aspect_indices'],
     }
     initializers = {
         'xavier_uniform_': torch.nn.init.xavier_uniform_,
