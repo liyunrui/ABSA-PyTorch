@@ -51,6 +51,7 @@ class Instructor:
 
         self.trainset = ABSADataset(opt.dataset_file['train'], tokenizer)
         self.testset = ABSADataset(opt.dataset_file['test'], tokenizer)
+            
         assert 0 <= opt.valset_ratio < 1
         if opt.valset_ratio > 0:
             valset_len = int(len(self.trainset) * opt.valset_ratio)
@@ -98,10 +99,11 @@ class Instructor:
             # switch model to training mode
             self.model.train()
             for i_batch, sample_batched in enumerate(train_data_loader):
+                # sample_batched: dict of tensor with shape of [Batch size, Max seq length]
                 global_step += 1
                 # clear gradient accumulators
                 optimizer.zero_grad()
-
+                # list of tensor with shape of [Batch size, Max seq length]
                 inputs = [sample_batched[col].to(self.opt.device) for col in self.opt.inputs_cols]
                 outputs = self.model(inputs)
                 targets = sample_batched['polarity'].to(self.opt.device)
